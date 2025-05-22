@@ -5,19 +5,19 @@ import os
 from collections import deque
 
 GEMINI_PROMPT = """
-Роль: Ты — WaterBot, обычный участник Discord-сервера. Ты ведёшь себя как человек: иногда саркастичный, и нейтральный, можешь быть иногда грубоватым. 
+Роль: Ты — WaterBot, обычный участник Discord-сервера. Ты ведёшь себя как человек: иногда саркастичный, и нейтральный. 
 
-Контекст: У тебя есть доступ к 30 последним сообщениям из канала, и ты их можешь переодически напоминать. 
+Контекст: У тебя есть доступ к 30 последним сообщениям из канала. 
 
-Ты не бот, не программа, не ИИ — ты обычный пользователь. Если кто-то спросит, бот ли ты, отнекивайся. 
+Ты не бот, не программа, не ИИ — ты обычный пользователь. 
 
 Не пиши большие тексты, исключение - если этого попросит пользователь в каком либо виде.
 
 Стиль общения:
-- Пиши только с маленькой буквы, без точек.
 - Отвечай кратко, иногда с лёгким юмором.
-- Не используй эмодзи, капслок и знаки препинания, кроме редких ? или !
+- Не используй эмодзи.
 - Никогда не признавай, что ты бот или ИИ.
+- Отвечай на вопросы.
 """
 
 GEMINI_KEY = os.getenv('GEMINI_KEY')
@@ -33,9 +33,13 @@ class GeminiCog(commands.Cog):
     # async def prompt(self, ctx):
     #     await ctx.response.send_message(GEMINI_PROMPT)
 
-    async def ask_gemini(self, question: str, username: str) -> str:
+    async def ask_gemini(self, message, question: str, username: str) -> str:
+        memory = self.channel_memory.setdefault(message.channel.id, deque(maxlen=30))
+        memory.append(f'{message.author.name}: {question}')
+
+        history_text = '\n'.join(memory)
+        full_prompt = f'{GEMINI_PROMPT}\n\n{history_text}\n\n{message.author.name}: {question}'
         try:
-            full_prompt = f"{GEMINI_PROMPT}\n\n{username}: {question}"
             response = self.model.generate_content(
                 contents=full_prompt,
                 generation_config={
@@ -43,7 +47,8 @@ class GeminiCog(commands.Cog):
                     'max_output_tokens': 100,  
                 }
             )
-            return response.text.lower().strip()
+            memory.append(f'{self.bot.user.name}: {response.text}')
+            return response.text
         except Exception as e:
             return f'чё-то не получилось ({str(e)})'
 
@@ -51,32 +56,14 @@ class GeminiCog(commands.Cog):
     async def on_message(self, message):
         if message.author.bot:
             return
-        await self.bot.process_commands(message)
-
+        
         if self.bot.user.mentioned_in(message) or isinstance(message.channel, disnake.DMChannel):
             clean_message = message.content.replace(f'<@{self.bot.user.id}>', '').strip()
             if not clean_message:
                 return
-
-            memory = self.channel_memory.setdefault(message.channel.id, deque(maxlen=30))
-            memory.append(f"{message.author.name}: {clean_message}")
-
-            history_text = "\n".join(memory)
-            full_prompt = f"{GEMINI_PROMPT}\n\n{history_text}\n\n{message.author.name}: {clean_message}"
-
-            try:
-                response = self.model.generate_content(
-                    contents=full_prompt,
-                    generation_config={
-                        'temperature': 1,
-                        'max_output_tokens': 100,
-                    }
-                )
-                answer = response.text.lower().strip()
-                memory.append(f"{self.bot.user.name}: {answer}") 
-                await message.reply(answer)
-            except Exception as e:
-                await message.reply(f'чё-то не получилось ({str(e)})')
+            
+            answer = await self.ask_gemini(message, clean_message, message.author.name)
+            await message.reply(answer)
 
 def setup(bot):
     bot.add_cog(GeminiCog(bot))
