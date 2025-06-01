@@ -134,7 +134,7 @@ class Other(commands.Cog):
 
     @commands.slash_command(description='DEV ONLY')
     @commands.has_permissions(administrator=True)
-    async def update(self, ctx):
+    async def test(self, ctx):
         embed = disnake.Embed(
             title='БОТ ВОЗВРАЩАЕТСЯ!',
             description=f'Да, спустя большое время, бот вернулся. За это время в бота добавились много новых функций, ну и конечно улучшились и другие.'
