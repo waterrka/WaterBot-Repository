@@ -142,7 +142,7 @@ class Other(commands.Cog):
         )
         
         embed.set_author(
-            name=f"{ctx.author.display_name} & хз",
+            name=f"{ctx.author.display_name} & эщкере",
             icon_url=ctx.author.avatar.url
         )
         await ctx.response.send_message(embed=embed)
