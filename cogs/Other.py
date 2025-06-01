@@ -135,19 +135,15 @@ class Other(commands.Cog):
     @commands.slash_command(description='test')
     async def test(self, ctx):
         embed = disnake.Embed(
-            title="тест",
-            description='ТЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕСТТТ',
+            title='БОТ ВОЗВРАЩАЕТСЯ!',
+            description=f'Да, спустя большое время, бот вернулся. За это время в бота добавились много новых функций, ну и конечно улучшились и другие.'
+            f'Вы также можете и пообщаться с ботом, просто пинганув его и написать текст. Все команды бота доступны командой `/help`. Удачи!',
             color=disnake.Color.blue()
         )
         
         embed.set_author(
             name=f"{ctx.author.display_name} & хз",
             icon_url=ctx.author.avatar.url
-        )
-
-        embed.set_footer(
-            text=f"{ctx.author.display_name} & хз",
-            icon_url=ctx.author.avatar.url if ctx.author.avatar else ctx.author.default_avatar.url
         )
         await ctx.response.send_message(embed=embed)
     
