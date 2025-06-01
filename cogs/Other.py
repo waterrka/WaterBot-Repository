@@ -141,9 +141,9 @@ class Other(commands.Cog):
             color=0xFFFFFF
         )
         
-        embed.set_author(
-            name=f"{ctx.author.display_name} & эщкере",
-            icon_url=ctx.author.avatar.url
+        embed.set_footer(
+            name=f"{ctx.bot.display_name} & эщкере",
+            icon_url=ctx.bot.avatar.url
         )
         await ctx.response.send_message(embed=embed)
     
