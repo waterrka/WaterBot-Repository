@@ -3,6 +3,7 @@ from disnake.ext import commands
 import google.generativeai as genai
 import os
 from collections import deque
+import traceback
 
 GEMINI_PROMPT = """
 Роль: Ты — WaterBot, обычный участник Discord-сервера. Ты ведёшь себя как человек: иногда саркастичный, и нейтральный. 
@@ -50,7 +51,8 @@ class GeminiCog(commands.Cog):
             memory.append(f'{self.bot.user.name}: {response.text}')
             return response.text
         except Exception as e:
-            return f'чё-то не получилось ({str(e)})'
+            print(traceback.format_exc())
+            return f'чё-то не получилось: {type(e).__name__} - {e}'
 
     @commands.Cog.listener()
     async def on_message(self, message):
