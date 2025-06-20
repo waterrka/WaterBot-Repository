@@ -32,7 +32,7 @@ async def on_ready():
 @bot.slash_command(description='DEV ONLY')
 @commands.has_permissions(administrator=True)
 @commands.has_role(MODERATOR)
-async def load(ctx: disnake.ApplicationCommandInteraction, module: str = commands.Param(name='module', description='Выберите модуль', choices=['Other', 'Economy', 'Moderator', 'Shop', 'Tickets', 'Gemini'])):
+async def load(ctx: disnake.ApplicationCommandInteraction, module: str = commands.Param(name='module', description='Выберите модуль', choices=['Other', 'Economy', 'Moderator', 'Shop', 'Tickets', 'Gemini', 'Logs'])):
     ext_name = f'cogs.{module}'
     if ext_name in bot.extensions.keys():
         embed = disnake.Embed(
@@ -52,7 +52,7 @@ async def load(ctx: disnake.ApplicationCommandInteraction, module: str = command
 @bot.slash_command(description='DEV ONLY')
 @commands.has_permissions(administrator=True)
 @commands.has_role(MODERATOR)
-async def unload(ctx: disnake.ApplicationCommandInteraction, module: str = commands.Param(name='module', description='Выберите модуль', choices=['Other', 'Economy', 'Moderator', 'Shop', 'Tickets', 'Gemini'])):
+async def unload(ctx: disnake.ApplicationCommandInteraction, module: str = commands.Param(name='module', description='Выберите модуль', choices=['Other', 'Economy', 'Moderator', 'Shop', 'Tickets', 'Gemini', 'Logs'])):
     ext_name = f'cogs.{module}'
     if ext_name not in bot.extensions.keys():
         embed = disnake.Embed(
@@ -72,7 +72,7 @@ async def unload(ctx: disnake.ApplicationCommandInteraction, module: str = comma
 @bot.slash_command(description='DEV ONLY')
 @commands.has_permissions(administrator=True)
 @commands.has_role(MODERATOR)
-async def reload(ctx: disnake.ApplicationCommandInteraction, module: str = commands.Param(name='module', description='Выберите модуль', choices=['Other', 'Economy', 'Moderator', 'Shop', 'Tickets', 'Gemini'])):
+async def reload(ctx: disnake.ApplicationCommandInteraction, module: str = commands.Param(name='module', description='Выберите модуль', choices=['Other', 'Economy', 'Moderator', 'Shop', 'Tickets', 'Gemini', 'Logs'])):
     bot.reload_extension(f'cogs.{module}')
     embed = disnake.Embed(
         title='Reload Extension',
