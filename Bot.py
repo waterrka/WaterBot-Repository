@@ -7,6 +7,7 @@ load_dotenv()
 
 API_KEY = os.getenv('API_KEY')
 MODERATOR = 1266812096209879123
+CHANNEL_ID = 1277290799239004230
 
 bot = commands.Bot(
     command_prefix='/',
@@ -20,6 +21,13 @@ async def on_ready():
     print(f'{bot.user.name} готов к работе!')
     activity = disnake.Activity(type=disnake.ActivityType.watching, name='boosty.to/waterrka')
     await bot.change_presence(activity=activity)
+    channel = bot.get_channel(CHANNEL_ID)
+    embed = disnake.Embed(
+        title='Бот онлайн!',
+        description=None,
+        color=0xFFFFFF
+    )
+    await channel.send(embed=embed)
 
 @bot.slash_command(description='DEV ONLY')
 @commands.has_permissions(administrator=True)

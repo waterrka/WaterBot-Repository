@@ -117,6 +117,7 @@ class EconomyGames(commands.Cog):
             description=f'Игрок - {ctx.author.mention}\nСтавка: ```{bet}📼 на {space}```\nИгра начнется через {time_str}',
             color=0xFFFFFF
         )
+        embed.set_footer(text=f'Ставка ・ {bet}📼')
         await ctx.response.send_message(embed=embed)
         await asyncio.sleep(9)
 
@@ -129,6 +130,7 @@ class EconomyGames(commands.Cog):
                 description=f'Выпал **{space}** цвет.\nВыйгрыш:```{reward}📼```',
                 color=0xFFFFFF
             )
+            embed.set_footer(text=f'Ставка ・ {bet}📼')
             self.economy.update_balance(user_id, reward)
         else:
             embed = disnake.Embed(
@@ -136,6 +138,7 @@ class EconomyGames(commands.Cog):
                 description=f'Выпал **{result}** цвет.\nВыйгрыш:```Ничего, удачи в следующий раз.```',
                 color=0xFFFFFF
             )
+            embed.set_footer(text=f'Ставка ・ {bet}📼')
         await ctx.edit_original_message(embed=embed)
 
     @commands.slash_command(description='Сыграть в русскую рулетку')
