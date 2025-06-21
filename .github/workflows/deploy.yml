@@ -3,22 +3,22 @@ name: Deploy via SFTP
 on:
   push:
     branches:
-      - main
+      - main  # или другая ветка
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Upload files via SFTP (SCP)
-        uses: appleboy/scp-action@v0.1.5
-        with:
-          host: 95.163.234.85
-          username: ${{ secrets.SFTP_USERNAME }}
-          password: ${{ secrets.SFTP_PASSWORD }}
-          port: 22
-          source: "./"
-          target: "/home/container/cogs"
+    - name: Deploy files via SFTP
+      uses: SamKirkland/FTP-Deploy-Action@4.0.0
+      with:
+        server: ${{ secrets.SFTP_HOST }}
+        username: ${{ secrets.SFTP_USERNAME }}
+        password: ${{ secrets.SFTP_PASSWORD }}
+        protocol: sftp
+        local-dir: ./  # или нужная папка с файлами для загрузки
+        server-dir: /home/container/cogs
