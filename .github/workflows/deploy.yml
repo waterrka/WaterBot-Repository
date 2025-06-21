@@ -1,0 +1,26 @@
+name: Deploy via SFTP
+
+on:
+  push:
+    branches:
+      - main  # ← сюда пиши свою ветку, если у тебя не main
+
+jobs:
+  sftp-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout репозиторий
+        uses: actions/checkout@v3
+
+      - name: Залить файлы на сервер через SFTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: valkyra                  # ← сюда можешь вписать IP, если домен не работает
+          username: ${{ secrets.SFTP_USERNAME }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          protocol: sftp
+          port: 22
+          local-dir: ./                    # ← какую папку заливать (здесь весь проект)
+          server-dir: /home/container/cogs  # ← куда заливать на сервере
+          dangerous-clean-slate: false
