@@ -1,24 +1,24 @@
-name: Deploy via SFTP
+name: Deploy via SCP
 
 on:
   push:
     branches:
-      - main  # или другая ветка
+      - main  # или твоя ветка
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout repo
       uses: actions/checkout@v3
 
-    - name: Deploy files via SFTP
-      uses: appleboy/sftp-action@master
+    - name: Upload files via SCP
+      uses: appleboy/scp-action@v0.1.3
       with:
         host: ${{ secrets.SFTP_HOST }}
         username: ${{ secrets.SFTP_USERNAME }}
-        password: ${{ secrets.SFTP_PASSWORD }}
+        password: ${{ secrets.SFTP_PASSWORD }}  # если аутентификация через пароль
         port: 22
-        source: "./"            # тут укажи нужную папку или "./" для корня репо
-        target: "/home/container/cogs"  # путь на сервере
+        source: "./"            # или нужная папка
+        target: "/home/container/cogs"  # папка на сервере
