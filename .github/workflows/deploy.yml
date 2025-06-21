@@ -16,7 +16,7 @@ jobs:
       - name: Залить файлы на сервер через SFTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
-          server: valkyra                  # ← сюда можешь вписать IP, если домен не работает
+          server: 95.163.234.85               # ← сюда можешь вписать IP, если домен не работает
           username: ${{ secrets.SFTP_USERNAME }}
           password: ${{ secrets.SFTP_PASSWORD }}
           protocol: sftp
