@@ -476,8 +476,7 @@ class RouletteGameView(disnake.ui.View):
                 color=0xFFFFFF
             )
             await ctx.followup.send(embed=embed)
-            await asyncio.sleep(5)  
-            await ctx.message.delete()
+            await asyncio.sleep(5) 
 
             current_index = game['players'].index(current_player)
             next_index = (current_index + 1) % len(game['players'])
@@ -489,6 +488,7 @@ class RouletteGameView(disnake.ui.View):
                 color=0xFFFFFF
             )
             await ctx.followup.send(embed=embed, view=self)
+            await ctx.message.delete()
 
     @disnake.ui.button(label='⬇️', custom_id='down', style=disnake.ButtonStyle.blurple)
     async def down(self, button: disnake.ui.Button, ctx: disnake.MessageInteraction):

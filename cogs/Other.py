@@ -132,16 +132,15 @@ class Other(commands.Cog):
             embed.set_image(url='https://via.placeholder.com/128')
         await ctx.response.send_message(embed=embed)
 
-    @commands.slash_command(description='DEV ONLY')
+    @commands.command(description='DEV ONLY')
     @commands.has_permissions(administrator=True)
-    async def test(self, ctx):
+    async def update(self, ctx):
         embed = disnake.Embed(
-            title='БОТ ВОЗВРАЩАЕТСЯ!',
-            description=f'Да, спустя большое время, бот вернулся. За это время в бота добавились много новых функций, ну и конечно улучшились и другие.'
-            f'Вы также можете и пообщаться с ботом, просто пинганув его и написать текст. Все команды бота доступны командой `/help`. Удачи!',
+            title='Обновление 1.01',
+            description=f'- Исправлены баги и ошибки<:TGSCatHappy:1274370694427181128>',
             color=0xFFFFFF
         )
-        await ctx.response.send_message(embed=embed)
+        await ctx.send(embed=embed)
     
     @commands.slash_command(description='Информация о бусти waterrka')
     async def boosty_info(self, ctx):

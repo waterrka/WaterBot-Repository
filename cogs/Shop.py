@@ -89,7 +89,7 @@ class Shop(commands.Cog):
     async def inventory(self, ctx, member: disnake.Member = None):
         target = member or ctx.author
         target = member or ctx.author  
-        target_name = member.display_name if member else ctx.author.display_name  
+        target_name = member.display_name if member else member.display_name  
         user_id = target.id  
         items = self.get_inventory(user_id)
 

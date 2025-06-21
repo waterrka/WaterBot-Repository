@@ -122,7 +122,7 @@ class Economy(commands.Cog):
             description=f'### 📼Кассеты\n```{balance}📼```',
             color=0xFFFFFF
         )
-        embed.set_thumbnail(url=ctx.author.display_avatar.url)
+        embed.set_thumbnail(url=member.display_avatar.url)
         await ctx.response.send_message(embed=embed)
 
     @commands.slash_command(description='Работааать')
