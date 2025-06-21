@@ -14,11 +14,11 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Deploy files via SFTP
-      uses: SamKirkland/FTP-Deploy-Action@4.0.0
+      uses: appleboy/sftp-action@master
       with:
-        server: ${{ secrets.SFTP_HOST }}
+        host: ${{ secrets.SFTP_HOST }}
         username: ${{ secrets.SFTP_USERNAME }}
         password: ${{ secrets.SFTP_PASSWORD }}
-        protocol: sftp
-        local-dir: ./  # или нужная папка с файлами для загрузки
-        server-dir: /home/container/cogs
+        port: 22
+        source: "./"            # тут укажи нужную папку или "./" для корня репо
+        target: "/home/container/cogs"  # путь на сервере
