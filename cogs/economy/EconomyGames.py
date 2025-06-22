@@ -293,8 +293,28 @@ class RouletteGameView(disnake.ui.View):
         self.reset_chamber()
 
     def reset_chamber(self):
-        self.shots_fired = 0  
-        self.bullet_position = random.randint(1, 6)  
+        self.shots_fired = 0
+        self.bullet_position = random.randint(1, 6)
+
+    async def next_turn(self, ctx):
+        # Следующий игрок
+        current_player = self.game['current_player']
+        players = self.game['players']
+        current_index = players.index(current_player)
+        next_index = (current_index + 1) % len(players)
+        self.game['current_player'] = players[next_index]
+
+        # Отправляем Embed с информацией о ходе и кнопками
+        embed = disnake.Embed(
+            title='Русская рулетка',
+            description=(
+                f'Очередь игрока {self.game["current_player"].mention}!\n\n'
+                f'Общий баланс: ```{self.game["total_bet"]}📼```\n'
+                f'Ставка: ```{self.game["bet"]}📼```'
+            ),
+            color=0xFFFFFF
+        )
+        await ctx.followup.send(embed=embed, view=self)
 
     @disnake.ui.button(label='🔫Стрелять', custom_id='shoot', style=disnake.ButtonStyle.blurple)
     async def shoot(self, button: disnake.ui.Button, ctx: disnake.MessageInteraction):
@@ -310,21 +330,22 @@ class RouletteGameView(disnake.ui.View):
             await ctx.response.send_message(embed=embed, ephemeral=True)
             return
 
-        self.shots_fired += 1  
-        is_deadly = self.shots_fired == self.bullet_position  
+        self.shots_fired += 1
+        is_deadly = self.shots_fired == self.bullet_position
 
         if is_deadly:
+            # Игрок погибает
             game['players'].remove(current_player)
             embed = disnake.Embed(
                 title='Русская рулетка',
                 description=f'{current_player.mention} стреляет и... Погибает.',
                 color=0xFFFFFF
             )
-
             await ctx.response.edit_message(embed=embed, view=None)
-            await asyncio.sleep(5) 
+            await asyncio.sleep(5)
             await ctx.message.delete()
 
+            # Проверяем, остался ли один победитель
             if len(game['players']) == 1:
                 winner = game['players'][0]
                 self.economy.update_balance(winner.id, game['total_bet'])
@@ -339,34 +360,30 @@ class RouletteGameView(disnake.ui.View):
                 return
             else:
                 self.reset_chamber()
+                # Назначаем следующего игрока после погибшего
+                next_index = 0
+                game['current_player'] = game['players'][next_index]
+                await self.next_turn(ctx)
         else:
+            # Игрок выживает
             embed = disnake.Embed(
                 title='Русская рулетка',
                 description=f'{current_player.mention} стреляет и... Выживает.',
                 color=0xFFFFFF
             )
-
-            await ctx.response.edit_message(embed=embed, view=None)  
+            await ctx.response.edit_message(embed=embed, view=None)
             await asyncio.sleep(5)
             await ctx.message.delete()
 
-        current_index = game['players'].index(current_player)
-        next_index = (current_index + 1) % len(game['players']) 
-        game['current_player'] = game['players'][next_index]
-
-        embed = disnake.Embed(
-            title='Русская рулетка',
-            description=f'Очередь игрока {game["current_player"].mention}!',
-            color=0xFFFFFF
-        )
-        await ctx.followup.send(embed=embed, view=self)
+            # Следующий ход
+            await self.next_turn(ctx)
 
     @disnake.ui.button(label='💰Повысить общий баланс', custom_id='up', style=disnake.ButtonStyle.blurple)
     async def up(self, button: disnake.ui.Button, ctx: disnake.MessageInteraction):
         game = self.game
         current_player = game['current_player']
-        
-        if ctx.author != current_player:  
+
+        if ctx.author != current_player:
             embed = disnake.Embed(
                 title='Ошибка',
                 description='Ваша очередь не наступила!',
@@ -374,7 +391,7 @@ class RouletteGameView(disnake.ui.View):
             )
             await ctx.response.send_message(embed=embed, ephemeral=True)
             return
-        
+
         user_balance = self.economy.get_balance(ctx.author.id)
         if user_balance < game['bet']:
             embed = disnake.Embed(
@@ -390,31 +407,26 @@ class RouletteGameView(disnake.ui.View):
 
         embed = disnake.Embed(
             title='Русская рулетка',
-            description=f'{ctx.author.mention} увеличил общий баланс и пропускает ход!\n\nОбщий баланс: ```{game["total_bet"]}📼```',
+            description=(
+                f'{ctx.author.mention} увеличил общий баланс и пропускает ход!\n\n'
+                f'Общий баланс: ```{game["total_bet"]}📼```\n'
+                f'Ставка: ```{game["bet"]}📼```'
+            ),
             color=0xFFFFFF
         )
-
-        await ctx.response.edit_message(embed=embed, view=None)  
+        await ctx.response.edit_message(embed=embed, view=None)
         await asyncio.sleep(5)
         await ctx.message.delete()
 
-        current_index = game['players'].index(current_player)
-        next_index = (current_index + 1) % len(game['players']) 
-        game['current_player'] = game['players'][next_index]
-
-        embed = disnake.Embed(
-            title='Русская рулетка',
-            description=f'Очередь игрока {game["current_player"].mention}!',
-            color=0xFFFFFF
-        )
-        await ctx.followup.send(embed=embed, view=self)
+        # Следующий ход
+        await self.next_turn(ctx)
 
     @disnake.ui.button(label='💤Подтолкнуть', custom_id='push', style=disnake.ButtonStyle.blurple)
     async def push(self, button: disnake.ui.Button, ctx: disnake.MessageInteraction):
         game = self.game
         current_player = game['current_player']
 
-        if ctx.author not in game['players']:  
+        if ctx.author not in game['players']:
             embed = disnake.Embed(
                 title='Ошибка',
                 description='Вы не можете подтолкнуть, так как не являетесь участником игры!',
@@ -422,8 +434,8 @@ class RouletteGameView(disnake.ui.View):
             )
             await ctx.response.send_message(embed=embed, ephemeral=True)
             return
-        
-        if ctx.author == current_player:  
+
+        if ctx.author == current_player:
             embed = disnake.Embed(
                 title='Ошибка',
                 description='Вы не можете подтолкнуть самого себя!',
@@ -441,8 +453,8 @@ class RouletteGameView(disnake.ui.View):
         await asyncio.sleep(5)
         await ctx.message.delete()
 
-        self.shots_fired += 1  
-        is_deadly = self.shots_fired == self.bullet_position  
+        self.shots_fired += 1
+        is_deadly = self.shots_fired == self.bullet_position
 
         if is_deadly:
             game['players'].remove(current_player)
@@ -452,7 +464,7 @@ class RouletteGameView(disnake.ui.View):
                 color=0xFFFFFF
             )
             message = await ctx.followup.send(embed=embed)
-            await asyncio.sleep(5)  
+            await asyncio.sleep(5)
             await message.delete()
 
             if len(game['players']) == 1:
@@ -469,6 +481,10 @@ class RouletteGameView(disnake.ui.View):
                 return
             else:
                 self.reset_chamber()
+                # Следующий ход — первый игрок в списке после удаления погибшего
+                next_index = 0
+                game['current_player'] = game['players'][next_index]
+                await self.next_turn(ctx)
         else:
             embed = disnake.Embed(
                 title='Русская рулетка',
@@ -476,29 +492,24 @@ class RouletteGameView(disnake.ui.View):
                 color=0xFFFFFF
             )
             await ctx.followup.send(embed=embed)
-            await asyncio.sleep(5) 
+            await asyncio.sleep(5)
 
-            current_index = game['players'].index(current_player)
-            next_index = (current_index + 1) % len(game['players'])
-            game['current_player'] = game['players'][next_index]
-
-            embed = disnake.Embed(
-                title='Русская рулетка',
-                description=f'Очередь игрока {game["current_player"].mention}!',
-                color=0xFFFFFF
-            )
-            await ctx.followup.send(embed=embed, view=self)
-            await ctx.message.delete()
+            # Следующий ход
+            await self.next_turn(ctx)
 
     @disnake.ui.button(label='⬇️', custom_id='down', style=disnake.ButtonStyle.blurple)
     async def down(self, button: disnake.ui.Button, ctx: disnake.MessageInteraction):
         async for message in ctx.channel.history(limit=2):
-            if message.author == ctx.bot.user: 
-                await message.delete()  
+            if message.author == ctx.bot.user:
+                await message.delete()
 
         embed = disnake.Embed(
             title='Русская рулетка',
-            description=f'Очередь игрока {self.game["current_player"].mention}!',
+            description=(
+                f'Очередь игрока {self.game["current_player"].mention}!\n\n'
+                f'Общий баланс: ```{self.game["total_bet"]}📼```\n'
+                f'Ставка: ```{self.game["bet"]}📼```'
+            ),
             color=0xFFFFFF
         )
         await ctx.response.send_message(embed=embed, view=self)
