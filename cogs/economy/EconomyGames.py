@@ -21,13 +21,13 @@ class EconomyGames(commands.Cog):
         if isinstance(error, disnake.ext.commands.errors.CommandOnCooldown):
             embed = disnake.Embed(
                 title='Ошибка',
-                description='Команда на кулдауне. Пожалуйста, подождите 3 минуты.',
+                description='Команда на кулдауне. Пожалуйста, подождите 5 минут.',
                 color=0xFFFFFF
             )
             await ctx.response.send_message(embed=embed, ephemeral=True)
 
     @commands.slash_command(description='Сыграть в слоты')
-    @commands.cooldown(6, 180, commands.BucketType.user)
+    @commands.cooldown(6, 300, commands.BucketType.user)
     async def slots(self, ctx, bet: int): # спасибо большое Линуксоиду за команду
         user_id = ctx.author.id
         user_balance = self.economy.get_balance(user_id)
@@ -39,10 +39,10 @@ class EconomyGames(commands.Cog):
             )
             await ctx.response.send_message(embed=embed, ephemeral=True)
             return
-        elif bet < 100:
+        elif bet < 50:
             embed = disnake.Embed(
                 title='Ошибка',
-                description='Ошибка, минимальная ставка 100📼.',
+                description='Ошибка, минимальная ставка 50📼.',
                 color=0xFFFFFF
             )
             await ctx.response.send_message(embed=embed, ephemeral=True)
@@ -100,10 +100,10 @@ class EconomyGames(commands.Cog):
             )
             await ctx.response.send_message(embed=embed, ephemeral=True)
             return
-        elif bet < 100:
+        elif bet < 50:
             embed = disnake.Embed(
                 title='Ошибка',
-                description='Ошибка, минимальная ставка 100📼.',
+                description='Ошибка, минимальная ставка 50📼.',
                 color=0xFFFFFF
             )
 
@@ -142,7 +142,7 @@ class EconomyGames(commands.Cog):
         await ctx.edit_original_message(embed=embed)
 
     @commands.slash_command(description='Сыграть в русскую рулетку')
-    @commands.cooldown(5, 180, commands.BucketType.user)
+    @commands.cooldown(5, 300, commands.BucketType.user)
     async def russian_roulette(self, ctx, bet: int):
         user_id = ctx.author.id
         user_balance = self.economy.get_balance(user_id)
@@ -155,10 +155,10 @@ class EconomyGames(commands.Cog):
             )
             await ctx.response.send_message(embed=embed, ephemeral=True)
             return
-        elif bet < 100:
+        elif bet < 50:
             embed = disnake.Embed(
                 title='Ошибка',
-                description='Ошибка, минимальная ставка 100📼.',
+                description='Ошибка, минимальная ставка 50📼.',
                 color=0xFFFFFF
             )
 

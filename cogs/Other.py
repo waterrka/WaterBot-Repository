@@ -3,6 +3,7 @@ from disnake.ext import commands
 import time
 from disnake.ui import View, Button
 from disnake import ButtonStyle
+from datetime import *
 
 class Other(commands.Cog):
     def __init__(self, bot):
@@ -19,7 +20,7 @@ class Other(commands.Cog):
         embed.add_field(name='🎮 Казино', value='`/slots`, `/roulette`, `/russian_roulette`', inline=False)
         embed.add_field(name='🛠️ Модерация', value='`/mute`, `/unmute`, `/ban`, `/unban`, `/warn`, `/rewarn`, `/warns`', inline=False)
         embed.add_field(name='ℹ️ Прочее', value='`/help`, `/avatar`, `/emoji`, `/ping`, `/server_info`, `/boosty_info`', inline=False)
-        embed.add_field(name='🤖 Эксклюзив', value='Так же у нас есть **Искуственный Интелект**, с которым можно поговорить(<пинг бота> ваш текст).', inline=False)
+        # embed.add_field(name='🤖 Эксклюзив', value='Так же у нас есть **Искуственный Интелект**, с которым можно поговорить(<пинг бота> ваш текст).', inline=False)
         embed.set_footer(text='Используй /<команда> для вызова команды.')
 
         await ctx.response.send_message(embed=embed)
@@ -135,11 +136,17 @@ class Other(commands.Cog):
     @commands.command(description='DEV ONLY')
     @commands.has_permissions(administrator=True)
     async def update(self, ctx):
+        message_time = datetime.now().strftime("%d.%m.%Y %H:%M")
         embed = disnake.Embed(
-            title='Обновление 1.01',
-            description=f'- ИспААfsравлены баги и ошибки<:TGSCatHappy:1274370694427181128>',
+            title='Обновление 1.02',
+            description=f'Большинство изменений затронуло раздел shop.\n'
+            '- Потверждение покупок.\n'
+            '- Удаление некоторых вещей, и добавление новых.\n'
+            '- Исправлены маленькие ошибки.\n'
+            'Обновление магазина еще не закончено, предстоят дальнейшие работы.',
             color=0xFFFFFF
         )
+        embed.set_footer(text=message_time)
         await ctx.send(embed=embed)
     
     @commands.slash_command(description='Информация о бусти waterrka')

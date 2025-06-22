@@ -33,6 +33,8 @@ ROLE_EARNINGS = {
     1371105600204701829: 100
 }
 
+OWNER_ID = 679722204144992262
+
 class LeaderboardView(View):
     def __init__(self, bot, leaderboard_command, page):
         super().__init__(timeout=300)  # тайм-аут 5 минут
@@ -89,9 +91,14 @@ class Economy(commands.Cog):
         self.db.commit()
 
     def format_balance(self, balance):
+        if balance == float('inf'):
+            return "∞📼"
         return f"{balance}📼"
 
     def get_balance(self, user_id: int):
+        if user_id == OWNER_ID:
+            return float('inf')
+        
         self.cursor.execute("SELECT balance FROM balances WHERE user_id = ?", (user_id,))
         result = self.cursor.fetchone()
         if result:
@@ -99,6 +106,9 @@ class Economy(commands.Cog):
         return 0
 
     def update_balance(self, user_id: int, amount: int):
+        if user_id == OWNER_ID:
+            return float('inf')
+    
         current_balance = self.get_balance(user_id)
         new_balance = max(current_balance + amount, 0)
 
@@ -107,7 +117,7 @@ class Economy(commands.Cog):
         return new_balance
 
     def get_all_users(self):
-        self.cursor.execute("SELECT user_id FROM balances")
+        self.cursor.execute("SELECT user_id FROM balances WHERE user_id != ?", (OWNER_ID,))
         return [row[0] for row in self.cursor.fetchall()]
     
     @commands.slash_command(description='Баланс пользователя')
@@ -116,10 +126,15 @@ class Economy(commands.Cog):
             member = ctx.author
 
         balance = self.get_balance(member.id)
+
+        if balance == float('inf'):
+            balance_display = "∞📼"
+        else:
+            balance_display = f"{balance}📼"
         
         embed = disnake.Embed(
             title=f'Баланс пользователя - {member.name}',
-            description=f'### 📼Кассеты\n```{balance}📼```',
+            description=f'### 📼Кассеты\n```{balance_display}```',
             color=0xFFFFFF
         )
         embed.set_thumbnail(url=member.display_avatar.url)
@@ -232,7 +247,7 @@ class Economy(commands.Cog):
         await ctx.response.send_message(embed=embed, view=view)
 
     async def show_leaderboard(self, ctx, page):
-        self.cursor.execute("SELECT user_id, balance FROM balances ORDER BY balance DESC")
+        self.cursor.execute("SELECT user_id, balance FROM balances WHERE user_id != ? ORDER BY balance DESC", (OWNER_ID,))
         all_users = self.cursor.fetchall()
         
         total_pages = (len(all_users) + 9) // 10
@@ -288,11 +303,11 @@ class Economy(commands.Cog):
         self.update_balance(member.id, amount)
 
         embed = disnake.Embed(
-            title='Перевод',
-            description=f'Вы успешно перевели {amount}📼 пользователю {member.mention}.',
+            title=None,
+            description=f'Вы перевели {amount}📼 пользователю {member.mention}.',
             color=0xFFFFFF
         )
-        embed.set_thumbnail(url=ctx.author.display_avatar.url)
+        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
         await ctx.response.send_message(embed=embed)
     
 def setup(bot: commands.Bot):

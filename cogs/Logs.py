@@ -1,6 +1,6 @@
 import disnake
 from disnake.ext import commands
-from datetime import datetime
+from datetime import *
 
 LOG_CHANNEL = 1266776037862412338
 
