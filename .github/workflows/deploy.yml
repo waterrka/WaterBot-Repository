@@ -1,4 +1,4 @@
-name: Deploy to Dash Hosting (via SFTP)
+name: Deploy to Dash Hosting via SFTP
 
 on:
   push:
@@ -12,12 +12,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Deploy to SFTP
-        uses: eshipman/sftp-action@v1
+      - name: Deploy with SFTP
+        uses: SamKirkland/FTP-Deploy-Action@4.3.4
         with:
-          host: ${{ secrets.SFTP_HOST }}
-          port: ${{ secrets.SFTP_PORT }}
+          server: ${{ secrets.SFTP_HOST }}
           username: ${{ secrets.SFTP_USER }}
           password: ${{ secrets.SFTP_PASSWORD }}
-          localPath: "./"
-          remotePath: "/home/container"
+          port: ${{ secrets.SFTP_PORT }}
+          protocol: "sftp"
+          local-dir: "./"
+          server-dir: "/home/container/"
