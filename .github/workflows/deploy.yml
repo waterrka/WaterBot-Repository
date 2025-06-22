@@ -20,6 +20,6 @@ jobs:
         port: ${{ secrets.SFTP_PORT }}
         username: ${{ secrets.SFTP_USER }}
         password: ${{ secrets.SFTP_PASSWORD }}
-        local_path: '/home/container/'
-        remote_path: ${{ secrets.TARGET_DIR }}
+        local_path: './'
+        remote_path: '/home/container/'
         sftp_only: true
