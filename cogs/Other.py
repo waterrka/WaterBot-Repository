@@ -137,7 +137,7 @@ class Other(commands.Cog):
     async def update(self, ctx):
         embed = disnake.Embed(
             title='Обновление 1.01',
-            description=f'- ИспААfравлены баги и ошибки<:TGSCatHappy:1274370694427181128>',
+            description=f'- ИспААfsравлены баги и ошибки<:TGSCatHappy:1274370694427181128>',
             color=0xFFFFFF
         )
         await ctx.send(embed=embed)
