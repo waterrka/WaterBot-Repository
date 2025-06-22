@@ -1,24 +1,25 @@
-name: Deploy to Dash Hosting via SFTP
+name: Deploy to Server via SFTP
 
 on:
   push:
-    branches: [ main ]  
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Deploy with SFTP
-        uses: SamKirkland/FTP-Deploy-Action@4.3.0
-        with:
-          server: ${{ secrets.SFTP_HOST }}
-          username: ${{ secrets.SFTP_USER }}
-          password: ${{ secrets.SFTP_PASSWORD }}
-          port: ${{ secrets.SFTP_PORT }}
-          protocol: "sftp"
-          local-dir: "./"
-          server-dir: "/home/container/"
+    - name: Deploy to SFTP
+      uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+      with:
+        server: ${{ secrets.SFTP_HOST }}
+        port: ${{ secrets.SFTP_PORT }}
+        username: ${{ secrets.SFTP_USER }}
+        password: ${{ secrets.SFTP_PASSWORD }}
+        local_path: "./"
+        server-dir: "/home/container/" 
+        sftp_only: true
