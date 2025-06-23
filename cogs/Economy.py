@@ -8,29 +8,109 @@ from disnake.ui import Button, View
 import cogs.economy.EconomyGames as EconomyGames
 import cogs.economy.EconomyModeration as EconomyModeration
 
+conn = sqlite3.connect('inventory.db')
+cursor = conn.cursor()
+
 WORK_COOLDOWN = commands.CooldownMapping.from_cooldown(1, 14400, commands.BucketType.user)
 COLLECT_COOLDOWN = commands.CooldownMapping.from_cooldown(1, 86400, commands.BucketType.user)
 
 ROLE_EARNINGS = {
-    1266812096209879123: 50, 
-    1266805974585446506: 40,  
-    1266855152900509788: 25,
-    1266856421765550133: 500,
-    1269001006834782350: 30,
-    1266856249559879713: 35,
-    1266859426707538041: 30,
-    1267517777904668712: 15,
-    1267881303605383178: 15,
-    1266857840732143697: 10,
-    1271121264051752990: 5,
-    1270702225370382346: 45,
-    1278745990999834796: 100,
-    1278746179206910053: 70,
-    1278746391149154409: 30,
-    1371104857775411251: 30,
-    1371104483928440852: 40,
-    1371105385917845564: 80,
-    1371105600204701829: 100
+    1271408406938386474: {
+        "min": -5,
+        "max": -5,
+        "name": "пред-1",
+        "negative": True
+    },
+    1271408553890156564: {
+        "min": -10,
+        "max": -10,
+        "name": "пред-2",
+        "negative": True
+    },
+    1271408682101510205: {
+        "min": -15,
+        "max": -15,
+        "name": "пред-3",
+        "negative": True
+    },
+    1271121264051752990: {
+        "min": 5,
+        "max": 5,
+        "name": "оповещение изменений",
+        "negative": False
+    },
+    1266857840732143697: {
+        "min": 15,
+        "max": 15,
+        "name": "Владелец блога",
+        "negative": False
+    },
+    1267517777904668712: {
+        "min": 15,
+        "max": 20,
+        "name": "Ивент-менеджер",
+        "negative": False
+    },
+    1371104857775411251: {
+        "min": 20,
+        "max": 30,
+        "name": "Важный гость",
+        "negative": False
+    },
+    1266859426707538041: {
+        "min": 30,
+        "max": 30,
+        "name": "Крутышка",
+        "negative": False
+    },
+    1266855152900509788: {
+        "min": 25,
+        "max": 25,
+        "name": "Tiny Games Studio Team",
+        "negative": False
+    },
+    1266805974585446506: {
+        "min": 30,
+        "max": 40,
+        "name": "Хелперы",
+        "negative": False
+    },
+    1266812096209879123: {
+        "min": 40,
+        "max": 60,
+        "name": "Модерация",
+        "negative": False
+    },
+    1278746179206910053: {
+        "min": 40,
+        "max": 60,
+        "name": "Капиталист",
+        "negative": False
+    },
+    1266856249559879713: {
+        "min": 30,
+        "max": 40,
+        "name": "Sponsor",
+        "negative": False
+    },
+    1270702225370382346: {
+        "min": 30,
+        "max": 40,
+        "name": "Booster",
+        "negative": False
+    },
+    1371105600204701829: {
+        "min": 70,
+        "max": 100,
+        "name": "Повелитель экономики",
+        "negative": False
+    },
+    1371105600204701829: {
+        "min": 500,
+        "max": 500,
+        "name": "хэппи берсдэй",
+        "negative": False
+    }
 }
 
 OWNER_ID = 679722204144992262
@@ -175,9 +255,10 @@ class Economy(commands.Cog):
 
         for role in ctx.author.roles:
             if role.id in ROLE_EARNINGS:
-                role_earning = ROLE_EARNINGS[role.id]
-                earning_roles.append((role, role_earning))
-                total_earnings += role_earning
+                data = ROLE_EARNINGS[role.id]
+                earning = random.randint(data["min"], data["max"])
+                earning_roles.append((role, earning))
+                total_earnings += earning
 
         earning_roles.sort(key=lambda x: x[1], reverse=True)
 
@@ -208,10 +289,12 @@ class Economy(commands.Cog):
         
         self.update_balance(ctx.author.id, total_earnings)
         
-        description_lines = [f'**Общий заработок {total_earnings}📼:**']
-        for role, earning in earning_roles:
-            description_lines.append(f'{role.mention} | {earning}📼')
-        
+        description_lines = [f'**Общий заработок: {total_earnings}📼**']
+        if earning_roles:
+            description_lines.append("\n**Доход от ролей:**")
+            for role, earning in earning_roles:
+                description_lines.append(f'{role.mention} | {earning}📼')
+
         embed = disnake.Embed(
             title='Доход ролей',
             description='\n'.join(description_lines),
@@ -222,18 +305,20 @@ class Economy(commands.Cog):
 
     @commands.slash_command(description='Доход ролей')
     async def list_collect(self, ctx):
-        earnings_by_role = [(role_id, earnings) for role_id, earnings in ROLE_EARNINGS.items()]
-        earnings_by_role.sort(key=lambda x: x[1], reverse=True)
+        description_lines = ["**Роли:**"]
 
-        description_lines = []
-        for role_id, earning in earnings_by_role:
+        for role_id, info in ROLE_EARNINGS.items():
             role = ctx.guild.get_role(role_id)
             if role:
-                description_lines.append(f'{role.mention} | {earning}📼')
+                if info["min"] == info["max"]:
+                    earning_text = f"{info['min']}📼"
+                else:
+                    earning_text = f"{info['min']}–{info['max']}📼"
+                description_lines.append(f'{role.mention} | {earning_text}')
 
         embed = disnake.Embed(
             title='Заработок ролей',
-            description='\n'.join(description_lines) if description_lines else 'Нет ролей с доходом.',
+            description='\n'.join(description_lines) if description_lines else 'Нет данных.',
             color=0xFFFFFF
         )
         embed.set_thumbnail(url=ctx.author.display_avatar.url)

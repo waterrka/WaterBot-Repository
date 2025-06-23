@@ -90,7 +90,7 @@ class Other(commands.Cog):
         f'Уровень сервера: **{boost_level}**'),
         inline=False)
 
-        embed.add_field(name='Владедец:', value=(f'{owner_id}'))
+        embed.add_field(name='Владелец:', value=(f'{owner_id}'))
 
         embed.add_field(name='Дата создания',
         value=(f'<t:{timestamp}:D> (<t:{timestamp}:R>)'),
@@ -138,12 +138,13 @@ class Other(commands.Cog):
     async def update(self, ctx):
         message_time = datetime.now().strftime("%d.%m.%Y %H:%M")
         embed = disnake.Embed(
-            title='Обновление 1.02',
-            description=f'Большинство изменений затронуло раздел shop.\n'
-            '- Потверждение покупок.\n'
-            '- Удаление некоторых вещей, и добавление новых.\n'
-            '- Исправлены маленькие ошибки.\n'
-            'Обновление магазина еще не закончено, предстоят дальнейшие работы.',
+            title='Обновление 1.03',
+            description=f'Обновление магазина завершено.\n'
+            '- Изменение доходов ролей.\n' 
+            '- Новые вещи в магазине.\n' 
+            '- Описания предметов при использовании.\n' 
+            '- Ну и все что было в недавнем обновлении 1.02.\n' 
+            'Следующее обновление для обычных игроков, не скоро). На этом все, удачи!',
             color=0xFFFFFF
         )
         embed.set_footer(text=message_time)

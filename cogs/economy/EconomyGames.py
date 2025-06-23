@@ -67,7 +67,10 @@ class EconomyGames(commands.Cog):
 
         for _ in range(6):
             await asyncio.sleep(0.7)
-            roll = random.choices(symbols, weights, k=3)
+            if random.random() < 0.35:
+                roll = random.sample(symbols, 3)
+            else:
+                roll = random.choices(symbols, weights, k=3)
             slots_embed.set_field_at(0, name='Результат', value=' '.join(roll), inline=False)
             await ctx.edit_original_message(embed=slots_embed)
 

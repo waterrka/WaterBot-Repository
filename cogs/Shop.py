@@ -21,54 +21,62 @@ SHOP_ITEMS = {
     10: {
         "name": "Воздух",
         "emoji": "💨",
-        "desc": "Чистый и полезный"
+        "desc": "Чистый и полезный",
+        "use_text": "Вы глубоко вдохнули воздух... и ничего не произошло. Но стало легче на душе."
     },
     100: {
-        "name": "Бананчеке",
-        "emoji": "🍌",
-        "desc": "Просто бананчеке. Но они могут понадобиться позже..."
+        "name": "Резиновая утка",
+        "emoji": "🦆",
+        "desc": "Ква-Ква",
+        "use_text": "🦆 Ква-ква! Утка одобряет ваш выбор. Теперь вы на 5% счастливее!"
     },
     200: {
         "name": "Лотерейный билет",
         "emoji": "🎟",
         "desc": "Может принести от 100 до 1000📼",
-        "effect": "lottery"
+        "effect": "lottery",
+    },
+    500: {
+        "name": "Костюм горничной",
+        "emoji": "👗",
+        "desc": "Лучший товар, японского качества.",
+        "role_id": 1386386401779646464,
+        "use_text": "👗 Вы облачились в костюм горничной. Выдана новая роль."
     },
     1000: {
         "name": "Комару фан",
         "emoji": "🎧",
         "desc": "Любишь Комару?",
-        "role_id": 1277235825830264912
+        "role_id": 1277235825830264912,
+        "use_text": "🎧 Вы надели наушники и погрузились в мир Комару. Выдана новая роль."
     },
     2000: {
         "name": "Владелец блога",
         "emoji": "📝",
         "desc": "Блог на сервере",
-        "role_id": 1266857840732143697
+        "role_id": 1266857840732143697,
+        "use_text": "📝 Вы стали владельцем блога, обязательно пинганите об этом <@679722204144992262>. Выдана новая роль."
     },
-    3000: {
-        "name": "Хранитель порядка",
-        "emoji": "🛡",
-        "desc": "Не модератор, но будто им родился",
-        "role_id": 1278746391149154409
-    },
-    5000: {
+    4000: {
         "name": "Важный гость",
         "emoji": "👔",
         "desc": "Открывает доступ к тайнам",
-        "role_id": 1371104857775411251
+        "role_id": 1371104857775411251,
+        "use_text": "👔 Вас проводят через потайные двери... Вы — Важный гость. Выдана новая роль."
     },
-    8000: {
+    6000: {
         "name": "Капиталист",
         "emoji": "💰",
         "desc": "Он уже зарабатывает на тебе",
-        "role_id": 1278746179206910053
+        "role_id": 1278746179206910053,
+        "use_text": "💰 Деньги текут в ваших венах. Вы стали настоящим капиталистом! Выдана новая роль."
     },
     30000: {
         "name": "Повелитель экономики",
         "emoji": "👑",
         "desc": "Богатейший человек на сервере",
-        "role_id": 1371105600204701829
+        "role_id": 1371105600204701829,
+        "use_text": "👑 Вся экономика склоняется перед вами. Поздравляем, Вы — Повелитель богатства! Выдана новая роль."
     }
 }
 
@@ -177,6 +185,15 @@ class ItemDropdown(disnake.ui.StringSelect):
         super().__init__(placeholder='Использовать предмет', options=options)
 
     async def callback(self, ctx):
+        if ctx.author.id != self.user_id:
+            embed = disnake.Embed(
+                title='Ошибка',
+                description='Вы не можете использовать чужой инвентарь.',
+                color=0xFFFFFF
+            )
+            await ctx.response.send_message(embed=embed, ephemeral=True)
+            return
+        
         price = int(self.values[0])
         item = SHOP_ITEMS[price]
         cursor.execute("SELECT amount FROM inventory WHERE user_id = ? AND item_name = ?", (self.user_id, item['name']))
@@ -192,11 +209,11 @@ class ItemDropdown(disnake.ui.StringSelect):
             effect = item.get("effect")
             if effect == "lottery":
                 lottery_rewards = [
-                    (100, 54),
-                    (200, 30),
-                    (500, 10),
-                    (700, 5),
-                    (1000, 1)
+                    (100, 50),
+                    (200, 25),
+                    (500, 15),
+                    (700, 7),
+                    (1000, 3)
                 ]
                 roll = random.randint(1, 100)
                 current = 0
@@ -212,10 +229,11 @@ class ItemDropdown(disnake.ui.StringSelect):
                 economy.update_balance(self.user_id, reward)
 
                 embed = disnake.Embed(
-                    title="Лотерея",
-                    description=f"Вы использовали {item['emoji']} **{item['name']}** и выиграли **{reward}📼**!",
+                    title='Лотерея',
+                    description=f"Вы использовали {item['emoji']} **{item['name']}** и выиграли ||**{reward}📼**||!",
                     color=0xFFFFFF
                 )
+                embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
                 await ctx.response.send_message(embed=embed)
                 return
 
@@ -225,16 +243,82 @@ class ItemDropdown(disnake.ui.StringSelect):
                 if role:
                     await ctx.author.add_roles(role)
             embed = disnake.Embed(
-                title='Предмет использован',
-                description=f'Вы использовали {item["emoji"]} **{item["name"]}**!',
+                title=None,
+                description=item.get('use_text'),
                 color=0xFFFFFF
             )
+            embed.set_author(name=f'{ctx.author.display_name} использовал {item["emoji"]} {item["name"]}', icon_url=ctx.author.display_avatar.url)
             await ctx.response.send_message(embed=embed)
+
+class ItemSellDropdown(disnake.ui.StringSelect):
+    def __init__(self, bot, user_id, items):
+        self.bot = bot
+        self.user_id = user_id
+        self.items = items
+
+        options = []
+        for item_name, amount in items:
+            for price, info in SHOP_ITEMS.items():
+                if info['name'] == item_name:
+                    options.append(disnake.SelectOption(
+                        label=f"{info['emoji']} {item_name} x {amount}",
+                        value=f"{price}|{item_name}|{amount}",
+                        description=f"{info['name']} x {amount} - {price // 2}📼 за шт"
+                    ))
+                    break
+
+        super().__init__(
+            placeholder='Выберите предметы для продажи',
+            options=options,
+            min_values=1,
+            max_values=len(options)  
+        )
+
+    async def callback(self, ctx):
+        if ctx.author.id != self.user_id:
+            embed = disnake.Embed(
+                title='Ошибка',
+                description='Вы не можете использовать чужой инвентарь.',
+                color=0xFFFFFF
+            )
+            await ctx.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        total_reward = 0
+        economy = self.bot.get_cog('Economy')
+
+        for selection in self.values:
+            price_str, item_name, amount_str = selection.split("|")
+            price = int(price_str)
+            amount = int(amount_str)
+
+            cursor.execute(
+                "SELECT amount FROM inventory WHERE user_id = ? AND item_name = ?",
+                (self.user_id, item_name)
+            )
+            result = cursor.fetchone()
+
+            if result:
+                cursor.execute("DELETE FROM inventory WHERE user_id = ? AND item_name = ?", (self.user_id, item_name))
+                reward = (price // 2) * amount
+                total_reward += reward
+
+        conn.commit()
+        economy.update_balance(self.user_id, total_reward)
+
+        embed = disnake.Embed(
+            title='Продажа завершена',
+            description=f'Вы продали {len(self.values)} предметов и получили **{total_reward}📼**.',
+            color=0xFFFFFF
+        )
+        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
+        await ctx.response.send_message(embed=embed)
 
 class ItemDropdownView(disnake.ui.View):
     def __init__(self, bot, user_id, items):
         super().__init__()
         self.add_item(ItemDropdown(bot, user_id, items))
+        self.add_item(ItemSellDropdown(bot, user_id, items))
 
 class ConfirmPurchaseView(disnake.ui.View):
     def __init__(self, bot, user_id, item_price, item_info):
@@ -245,12 +329,19 @@ class ConfirmPurchaseView(disnake.ui.View):
         self.item_info = item_info
 
     async def purchase(self, ctx: disnake.MessageInteraction, amount: int):
+        await ctx.response.defer()
+        
         economy = self.bot.get_cog('Economy')
         total_price = self.item_price * amount
         user_balance = economy.get_balance(self.user_id)
 
         if user_balance < total_price:
-            await ctx.response.edit_message(content=f'Недостаточно средств для покупки {amount} предмет{"ов" if amount > 1 else ""} за {total_price}📼.', view=None)
+            embed = disnake.Embed(
+                title='Ошибка',
+                description='Недостаточно средств для покупки.',
+                color=0xFFFFFF
+            )
+            await ctx.response.edit_message(embed=embed, view=None)
             self.stop()
             return
 
@@ -263,8 +354,8 @@ class ConfirmPurchaseView(disnake.ui.View):
             description=f"Вы купили {amount} × {self.item_info['emoji']} **{self.item_info['name']}** за {total_price}📼. ```Чтобы использовать предмет, напишите /inventory```",
             color=0xFFFFFF
         )
+        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
         await ctx.channel.send(embed=embed)
-        self.stop()
 
     @disnake.ui.button(label='Подтвердить', style=disnake.ButtonStyle.green)
     async def confirm(self, button: disnake.ui.Button, ctx: disnake.MessageInteraction):
@@ -276,7 +367,11 @@ class ConfirmPurchaseView(disnake.ui.View):
 
     @disnake.ui.button(label='Отмена', style=disnake.ButtonStyle.red)
     async def cancel(self, button: disnake.ui.Button, ctx: disnake.MessageInteraction):
-        await ctx.response.edit_message(content='Покупка отменена.', view=None)
+        embed = disnake.Embed(
+            title='Отмена покупки',
+            description='Покупка отменена.'
+        )
+        await ctx.response.edit_message(embed=embed, view=None)
         self.stop()
 
 def setup(bot):

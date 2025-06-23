@@ -22,7 +22,8 @@ class Tickets(commands.Cog):
             title='Система Тикетов',
             description=(
                 'С помощью тикетов вы можете подать заявку на какую-либо роль, '
-                'написать репорт на человека, либо задать вопрос администрации.\n\n'
+                'написать репорт на человека, либо задать вопрос администрации.\n' \
+                'За шуточный тикет, предупреждение/мут 1 час.\n\n'
                 'Чтобы открыть тикет, нажмите на одну из интересующих кнопок ниже.'
             ),
             color=0xFFFFFF
@@ -31,6 +32,7 @@ class Tickets(commands.Cog):
         await ctx.send(embed=embed, view=view)
     
     async def ticket_create(self, ctx, ticket_type, message):
+        await ctx.response.defer()
         category = disnake.utils.get(ctx.guild.categories, id=TICKET_CATEGORY)
 
         overwrites = {
@@ -64,7 +66,7 @@ class Tickets(commands.Cog):
             description=f'Ваш тикет: {channel.mention}.',
             color=0xFFFFFF
         )
-        await ctx.response.send_message(embed=embed_initial, ephemeral=True)
+        await ctx.followup.send(embed=embed_initial, ephemeral=True)
 
     async def ticket_close(self, ctx):
         if ctx.channel.category and ctx.channel.category.id == TICKET_CATEGORY:
@@ -103,6 +105,7 @@ class Tickets(commands.Cog):
             await ctx.response.send_message(embed=embed, ephemeral=True)
 
     async def take_ticket(self, ctx):
+        await ctx.response.defer()
         if ctx.channel.category and ctx.channel.category.id == TICKET_CATEGORY:
             embed = disnake.Embed(
                 title='Тикет взят на рассмотрение',
