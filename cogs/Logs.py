@@ -64,12 +64,65 @@ class Logs(commands.Cog):
     @commands.Cog.listener()
     async def on_message_edit(self, before, after):
         channel = self.bot.get_channel(LOG_CHANNEL)
+        edit_time = datetime.now().strftime('%d.%m.%Y в %H:%M')
+
         if after.author.bot:
             return
         elif before.content == after.content:
             return
         elif not before.guild:
             return
+        
+        if before.attachments:
+            before_attachments = "\n".join(attachment.url for attachment in before.attachments)
+        else:
+            before_attachments = "Вложений нет."
+
+        if after.attachments:
+            after_attachments = "\n".join(attachment.url for attachment in after.attachments)
+        else:
+            after_attachments = "Вложений нет."
+        
+        embed = disnake.Embed(
+            title=None,
+            description=f'[Сообщение]({after.jump_url}) было отредактировано',
+            color=disnake.Color.yellow()
+        )
+        embed.add_field(name='Старое сообщение:', value=f'```{before.content}```', inline=False)
+        embed.add_field(name='Новое сообщение:', value=f'```{after.content}```', inline=False)
+        embed.add_field(name='Канал:', value=after.channel.mention, inline=False)
+        embed.add_field(name="Вложения до редактирования", value=before_attachments, inline=False)
+        embed.add_field(name="Вложения после редактирования", value=after_attachments, inline=False)
+        embed.set_author(name=after.author.display_name, icon_url=after.author.display_avatar.url)
+        embed.set_footer(text=f'ID сообщения: {after.id} • {edit_time}')
+        await channel.send(embed=embed)
+    
+    @commands.Cog.listener()
+    async def on_message_delete(self, message):
+        channel = self.bot.get_channel(LOG_CHANNEL)
+        delete_time = datetime.now().strftime('%d.%m.%Y в %H:%M')
+
+        if message.author.bot:
+            return
+        elif not message.guild:
+            return
+        
+        if message.attachments:
+            message_attachments = "\n".join(attachment.url for attachment in message.attachments)
+        else:
+            message_attachments = "Вложений нет."
+
+        embed = disnake.Embed(
+            title=None,
+            description=f'Сообщение было удалено',
+            color=disnake.Color.yellow()
+        )
+        embed.add_field(name='Текст сообщения:', value=f'```{message.content}```', inline=False)
+        embed.add_field(name='Канал:', value=message.channel.mention, inline=False)
+        embed.add_field(name='Вложения', value=message_attachments, inline=False)
+        embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
+        embed.set_footer(text=f'Время удаления • {delete_time}')
+        await channel.send(embed=embed)
 
 def setup(bot):
     bot.add_cog(Logs(bot))
