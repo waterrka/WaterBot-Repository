@@ -67,7 +67,7 @@ class EconomyGames(commands.Cog):
 
         for _ in range(6):
             await asyncio.sleep(0.7)
-            if random.random() < 0.35:
+            if random.random() < 0.2:
                 roll = random.sample(symbols, 3)
             else:
                 roll = random.choices(symbols, weights, k=3)
