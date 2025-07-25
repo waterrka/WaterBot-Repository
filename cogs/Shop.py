@@ -2,6 +2,7 @@ import disnake
 from disnake.ext import commands
 import sqlite3
 import random
+from cogs.services.BalanceService import BalanceService
 
 conn = sqlite3.connect('inventory.db')
 cursor = conn.cursor()
@@ -43,26 +44,33 @@ SHOP_ITEMS = {
         "role_id": 1386386401779646464,
         "use_text": "👗 Вы облачились в костюм горничной. Выдана новая роль."
     },
-    1000: {
+    700: {
         "name": "Комару фан",
         "emoji": "🎧",
         "desc": "Любишь Комару?",
         "role_id": 1277235825830264912,
         "use_text": "🎧 Вы надели наушники и погрузились в мир Комару. Выдана новая роль."
     },
-    2000: {
-        "name": "Владелец блога",
-        "emoji": "📝",
-        "desc": "Блог на сервере",
-        "role_id": 1266857840732143697,
-        "use_text": "📝 Вы стали владельцем блога, обязательно пинганите об этом <@679722204144992262>. Выдана новая роль."
+    1000: {
+        "name": "Счастливая монета",
+        "emoji": "🪙 ",
+        "desc": "Ходят слухи, что оно дает деньги",
+        "role_id": 1398213186137751632,
+        "use_text": "🪙 Удача будет явно на вашей стороне. Выдана новая роль."
     },
-    4000: {
+    3000: {
         "name": "Важный гость",
         "emoji": "👔",
         "desc": "Открывает доступ к тайнам",
         "role_id": 1371104857775411251,
         "use_text": "👔 Вас проводят через потайные двери... Вы — Важный гость. Выдана новая роль."
+    },
+    4000: {
+        "name": "Владелец блога",
+        "emoji": "📝",
+        "desc": "Блог на сервере",
+        "role_id": 1266857840732143697,
+        "use_text": "📝 Вы стали владельцем блога, обязательно пинганите об этом <@679722204144992262>. Выдана новая роль."
     },
     5000: {
         "name": "Кастомная роль",
@@ -129,7 +137,7 @@ class Shop(commands.Cog):
         embed = disnake.Embed(title=f"Инвентарь {target.display_name}", color=0xFFFFFF)
         for item_name, amount in items:
             emoji = next((info["emoji"] for info in SHOP_ITEMS.values() if info["name"] == item_name), '')
-            embed.add_field(name=f"{emoji} {item_name}", value=f"Количество:\n```{amount}```", inline=False)
+            embed.add_field(name=f"{emoji} {item_name}", value=f"Количество:\n{amount}", inline=False)
         if ctx.author.id == target.id:
             await ctx.send(embed=embed, view=ItemDropdownView(self.bot, target.id, items))
         else:
@@ -138,12 +146,14 @@ class Shop(commands.Cog):
     @commands.slash_command(name='shop', description='Магазин')
     async def shop(self, ctx):
         embed = disnake.Embed(title='Магазин watershop', color=0xFFFFFF)
-        for price, info in SHOP_ITEMS.items():
+        for idx, (price, info) in enumerate(SHOP_ITEMS.items(), start=1):
+            prefix = "★" if "role_id" in info else ""
             embed.add_field(
-                name=f"{info['emoji']} {info['name']} — {price}📼",
+                name=f"{prefix}{idx}. {info['emoji']} {info['name']} — {price}📼",
                 value=info['desc'],
                 inline=False
             )
+            embed.set_footer(text='★ — предметы с ролью и доходом')
         await ctx.send(embed=embed, view=DropdownView(self.bot))
 
 class Dropdown(disnake.ui.StringSelect):
@@ -232,8 +242,8 @@ class ItemDropdown(disnake.ui.StringSelect):
                         reward = amount
                         break
 
-                economy = self.bot.get_cog('Economy')
-                economy.update_balance(self.user_id, reward)
+                balance_service = BalanceService()
+                balance_service.update_balance(self.user_id, reward)
 
                 embed = disnake.Embed(
                     title='Лотерея',
@@ -241,7 +251,13 @@ class ItemDropdown(disnake.ui.StringSelect):
                     color=0xFFFFFF
                 )
                 embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
-                await ctx.response.send_message(embed=embed)
+
+                if new_amount > 0:
+                    view = disnake.ui.View()
+                    view.add_item(UseAgainButton(self.bot, self.user_id, price, item["name"], new_amount))
+                    await ctx.response.send_message(embed=embed, view=view)
+                else:
+                    await ctx.response.send_message(embed=embed)
                 return
 
             role_id = item.get('role_id')
@@ -255,7 +271,13 @@ class ItemDropdown(disnake.ui.StringSelect):
                 color=0xFFFFFF
             )
             embed.set_author(name=f'{ctx.author.display_name} использовал {item["emoji"]} {item["name"]}', icon_url=ctx.author.display_avatar.url)
-            await ctx.response.send_message(embed=embed)
+            
+            if not item.get("role_id") and new_amount > 0:
+                view = disnake.ui.View()
+                view.add_item(UseAgainButton(self.bot, self.user_id, price, item["name"], new_amount))
+                await ctx.response.send_message(embed=embed, view=view)
+            else:
+                await ctx.response.send_message(embed=embed)
 
 class ItemSellDropdown(disnake.ui.StringSelect):
     def __init__(self, bot, user_id, items):
@@ -292,7 +314,7 @@ class ItemSellDropdown(disnake.ui.StringSelect):
             return
 
         total_reward = 0
-        economy = self.bot.get_cog('Economy')
+        balance_service = BalanceService()
 
         for selection in self.values:
             price_str, item_name, amount_str = selection.split("|")
@@ -311,7 +333,7 @@ class ItemSellDropdown(disnake.ui.StringSelect):
                 total_reward += reward
 
         conn.commit()
-        economy.update_balance(self.user_id, total_reward)
+        balance_service.update_balance(self.user_id, total_reward)
 
         embed = disnake.Embed(
             title='Продажа завершена',
@@ -338,9 +360,9 @@ class ConfirmPurchaseView(disnake.ui.View):
     async def purchase(self, ctx: disnake.MessageInteraction, amount: int):
         await ctx.response.defer()
         
-        economy = self.bot.get_cog('Economy')
+        balance_service = BalanceService()
         total_price = self.item_price * amount
-        user_balance = economy.get_balance(self.user_id)
+        user_balance = balance_service.get_balance(self.user_id)
 
         if user_balance < total_price:
             embed = disnake.Embed(
@@ -352,13 +374,13 @@ class ConfirmPurchaseView(disnake.ui.View):
             self.stop()
             return
 
-        economy.update_balance(self.user_id, -total_price)
+        balance_service.update_balance(self.user_id, -total_price)
         shop_cog = self.bot.get_cog('Shop')
         shop_cog.add_to_inventory(self.user_id, self.item_info['name'], amount)
 
         embed = disnake.Embed(
             title='Поздравляем с покупкой!',
-            description=f"Вы купили {amount} × {self.item_info['emoji']} **{self.item_info['name']}** за {total_price}📼. ```Чтобы использовать предмет, напишите /inventory```",
+            description=f"Вы купили {amount} × {self.item_info['emoji']} **{self.item_info['name']}** за {total_price}📼. Чтобы использовать предмет, напишите /inventory",
             color=0xFFFFFF
         )
         embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
@@ -380,6 +402,79 @@ class ConfirmPurchaseView(disnake.ui.View):
         )
         await ctx.response.edit_message(embed=embed, view=None)
         self.stop()
+
+class UseAgainButton(disnake.ui.Button):
+    def __init__(self, bot, user_id, item_price, item_name, remaining_amount):
+        super().__init__(
+            label=f'Использовать ещё [{remaining_amount}]',
+            style=disnake.ButtonStyle.green
+        )
+        self.bot = bot
+        self.user_id = user_id
+        self.item_price = item_price
+        self.item_name = item_name
+
+    async def callback(self, ctx: disnake.MessageInteraction):
+        if ctx.author.id != self.user_id:
+            await ctx.response.send_message("Вы не можете использовать чужой инвентарь.", ephemeral=True)
+            return
+
+        item = SHOP_ITEMS[self.item_price]
+
+        cursor.execute("SELECT amount FROM inventory WHERE user_id = ? AND item_name = ?", (self.user_id, self.item_name))
+        result = cursor.fetchone()
+        if not result or result[0] <= 0:
+            await ctx.response.send_message("У вас больше нет этого предмета.", ephemeral=True)
+            return
+
+        new_amount = result[0] - 1
+        if new_amount == 0:
+            cursor.execute("DELETE FROM inventory WHERE user_id = ? AND item_name = ?", (self.user_id, self.item_name))
+        else:
+            cursor.execute("UPDATE inventory SET amount = ? WHERE user_id = ? AND item_name = ?", (new_amount, self.user_id, self.item_name))
+        conn.commit()
+
+        balance_service = BalanceService()
+
+        if item.get("effect") == "lottery":
+            lottery_rewards = [
+                (100, 50),
+                (200, 25),
+                (500, 15),
+                (700, 7),
+                (1000, 3)
+            ]
+            roll = random.randint(1, 100)
+            current = 0
+            reward = 0
+
+            for amount, chance in lottery_rewards:
+                current += chance
+                if roll <= current:
+                    reward = amount
+                    break
+
+            balance_service.update_balance(self.user_id, reward)
+
+            embed = disnake.Embed(
+                title='Лотерея',
+                description=f"Вы использовали {item['emoji']} **{item['name']}** и выиграли ||**{reward}📼**||!",
+                color=0xFFFFFF
+            )
+        else:
+            embed = disnake.Embed(
+                description=item.get("use_text"),
+                color=0xFFFFFF
+            )
+
+        embed.set_author(name=f'{ctx.author.display_name} использовал {item["emoji"]} {item["name"]}', icon_url=ctx.author.display_avatar.url)
+
+        if new_amount > 0:
+            view = disnake.ui.View()
+            view.add_item(UseAgainButton(self.bot, self.user_id, self.item_price, self.item_name, new_amount))
+            await ctx.response.edit_message(embed=embed, view=view)
+        else:
+            await ctx.response.edit_message(embed=embed, view=None)
 
 def setup(bot):
     bot.add_cog(Shop(bot))

@@ -4,7 +4,7 @@ from datetime import datetime
 
 TICKET_CATEGORY = 1266797507145629836
 MODERAITON = [1266812096209879123, 1266805974585446506]
-LOG_CHANNEL = 1266776037862412338
+LOG_CHANNEL = 1390278452250411088
 
 class Tickets(commands.Cog):
     def __init__(self, bot):
@@ -79,7 +79,7 @@ class Tickets(commands.Cog):
             )
             await ctx.response.send_message(embed=embed, ephemeral=True)
 
-    async def ticket_close_with_reason(self, ctx, reason):
+    async def ticket_close_with_reason(self, ctx: disnake.ModalInteraction, reason):
         if ctx.channel.category and ctx.channel.category.id == TICKET_CATEGORY:
             log_channel = self.bot.get_channel(LOG_CHANNEL)
             if log_channel:
@@ -88,13 +88,14 @@ class Tickets(commands.Cog):
                     title='Тикет закрыт с причиной',
                     description=(
                         f'**Название тикета:** {ctx.channel.name}\n'
-                        f'**Закрыт пользователем:** {ctx.author.mention}\n'
+                        f'**Закрыт пользователем:** {ctx.user.mention}\n'
                         f'**Причина:** {reason}\n'
                         f'**Дата закрытия:** <t:{timestamp}:D> (<t:{timestamp}:R>)'
                     ),
                     color=0xFFFFFF
                 )
                 await log_channel.send(embed=log_embed)
+
             await ctx.channel.delete(reason=f'Тикет закрыт с причиной: {reason}')
         else:
             embed = disnake.Embed(
@@ -204,28 +205,8 @@ class ManageTicketView(disnake.ui.View):
 
     @disnake.ui.button(label='Закрыть Тикет с Причиной', style=disnake.ButtonStyle.danger, custom_id='close_ticket_with_reason')
     async def close_ticket_with_reason(self, button: disnake.ui.Button, ctx: disnake.MessageInteraction):
-        embed = disnake.Embed(
-            title='Закрыть тикет',
-            description='Пожалуйста, укажите причину закрытия тикета!',
-            color=0xFFFFFF
-        )
-        await ctx.response.send_message(embed=embed, ephemeral=True)
-
-        response = await self.bot.wait_for(
-            'message',
-            check=lambda m: m.author == ctx.author and m.channel == ctx.channel,
-            timeout=60.0
-        )
-        if response:
-            reason = response.content
-            await ctx.client.get_cog('Tickets').ticket_close_with_reason(ctx, reason)
-        else:
-            embed = disnake.Embed(
-                title='Ошибка',
-                description='Причина не указана. Операция отменена.',
-                color=0xFFFFFF
-            )
-            await ctx.response.send_message(embed=embed, ephemeral=True)
+        modal = CloseTicketReasonModal(bot=self.bot, ctx=ctx)
+        await ctx.response.send_modal(modal)
 
     @disnake.ui.button(label='Взять на Рассмотрение', style=disnake.ButtonStyle.success, custom_id='take_ticket')
     async def take_ticket(self, button: disnake.ui.Button, ctx: disnake.MessageInteraction):
@@ -238,6 +219,25 @@ class ManageTicketView(disnake.ui.View):
                 color=0xFFFFFF
             )
             await ctx.response.send_message(embed=embed, ephemeral=True)
+
+class CloseTicketReasonModal(disnake.ui.Modal):
+    def __init__(self, bot, ctx: disnake.MessageInteraction):
+        self.bot = bot
+        components = [
+            disnake.ui.TextInput(
+                label='Причина',
+                placeholder='Введите текст...',
+                custom_id='reason_input',
+                style=disnake.TextInputStyle.paragraph,
+                max_length=500
+            )
+        ]
+        super().__init__(title='Закрыть тикет с причиной', components=components)
+
+    async def callback(self, ctx: disnake.ModalInteraction):
+        await ctx.response.defer() 
+        reason = ctx.text_values["reason_input"]
+        await self.bot.get_cog("Tickets").ticket_close_with_reason(ctx, reason)
 
 def setup(bot):
     bot.add_cog(Tickets(bot))

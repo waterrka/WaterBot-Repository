@@ -1,17 +1,18 @@
 import disnake
 from disnake.ext import commands
+from cogs.services.BalanceService import BalanceService
 
 BOTOVOD = 1276916412547338303
 
 class EconomyModeration(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.economy = self.bot.get_cog('Economy')
+        self.balance_service = BalanceService()
 
     @commands.slash_command(description='Добавить деньги пользователю')
     @commands.has_any_role(BOTOVOD)
     async def add(self, ctx, member: disnake.Member, amount: int):
-        self.economy.update_balance(member.id, amount)
+        self.balance_service.update_balance(member.id, amount)
         embed = disnake.Embed(
             title=None,
             description=f'Добавлено {amount}📼 к балансу {member.mention}.',
@@ -23,7 +24,7 @@ class EconomyModeration(commands.Cog):
     @commands.slash_command(description='Удалить деньги у пользователя')
     @commands.has_any_role(BOTOVOD)
     async def remove(self, ctx, member: disnake.Member, amount: int):
-        self.economy.update_balance(member.id, -amount)
+        self.balance_service.update_balance(member.id, -amount)
         embed = disnake.Embed(
             title=None,
             description=f'Удалено {amount}📼 с баланса {member.mention}.',
@@ -35,13 +36,13 @@ class EconomyModeration(commands.Cog):
     @commands.slash_command(description='ПЛАТИ НАЛОГ')
     @commands.has_any_role(BOTOVOD)
     async def nalog(self, ctx, percent: int):
-        members = self.economy.get_all_users()
+        members = self.balance_service.get_all_users()
         total_collected = 0
         percent = percent / 100
         for user in members:
-            balance = self.economy.get_balance(user)
+            balance = self.balance_service.get_balance(user)
             nalog_amount = int(balance * percent)
-            self.economy.update_balance(user, -nalog_amount)
+            self.balance_service.update_balance(user, -nalog_amount)
             total_collected += nalog_amount
 
         embed = disnake.Embed(
@@ -50,7 +51,7 @@ class EconomyModeration(commands.Cog):
             color=0xFFFFFF
         )
         await ctx.response.send_message(embed=embed)
-        self.economy.update_balance(ctx.author.id, total_collected)
+        self.balance_service.update_balance(ctx.author.id, total_collected)
 
     @add.error
     @remove.error

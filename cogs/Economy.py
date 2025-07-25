@@ -5,8 +5,8 @@ import random
 import time
 import sqlite3
 from disnake.ui import Button, View
-import cogs.economy.EconomyGames as EconomyGames
-import cogs.economy.EconomyModeration as EconomyModeration
+from cogs.services.BalanceService import BalanceService
+from cogs.services.LeaderboardService import LeaderboardService
 
 conn = sqlite3.connect('inventory.db')
 cursor = conn.cursor()
@@ -37,6 +37,18 @@ ROLE_EARNINGS = {
         "min": 5,
         "max": 5,
         "name": "оповещение изменений",
+        "negative": False
+    },
+    1277235825830264912: {
+        "min": 10,
+        "max": 10,
+        "name": "Комару Фан",
+        "negative": False
+    },
+    1398213186137751632: {
+        "min": 10,
+        "max": 30,
+        "name": "Счастливая монета",
         "negative": False
     },
     1266857840732143697: {
@@ -105,7 +117,7 @@ ROLE_EARNINGS = {
         "name": "Повелитель экономики",
         "negative": False
     },
-    1371105600204701829: {
+    1266856421765550133: {
         "min": 500,
         "max": 500,
         "name": "хэппи берсдэй",
@@ -113,7 +125,7 @@ ROLE_EARNINGS = {
     }
 }
 
-OWNER_ID = 679722204144992262
+OWNER_ID = {679722204144992262, 748212381347479743}
 
 class LeaderboardView(View):
     def __init__(self, bot, leaderboard_command, page):
@@ -151,61 +163,20 @@ class LeaderboardView(View):
 class Economy(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.db = sqlite3.connect('economy.db')
-        self.cursor = self.db.cursor()
-
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS balances (
-            user_id INTEGER PRIMARY KEY,
-            balance INTEGER NOT NULL DEFAULT 0
-        )
-        ''')
-
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS leaderboard (
-            user_id INTEGER PRIMARY KEY,
-            balance INTEGER NOT NULL DEFAULT 0,
-            rank INTEGER
-        )
-        ''')
-        self.db.commit()
+        self.balance_service = BalanceService()
+        self.leaderboard_service = LeaderboardService()
 
     def format_balance(self, balance):
         if balance == float('inf'):
             return "∞📼"
         return f"{balance}📼"
-
-    def get_balance(self, user_id: int):
-        if user_id == OWNER_ID:
-            return float('inf')
-        
-        self.cursor.execute("SELECT balance FROM balances WHERE user_id = ?", (user_id,))
-        result = self.cursor.fetchone()
-        if result:
-            return result[0]
-        return 0
-
-    def update_balance(self, user_id: int, amount: int):
-        if user_id == OWNER_ID:
-            return float('inf')
-    
-        current_balance = self.get_balance(user_id)
-        new_balance = max(current_balance + amount, 0)
-
-        self.cursor.execute("INSERT OR REPLACE INTO balances (user_id, balance) VALUES (?, ?)", (user_id, new_balance))
-        self.db.commit()
-        return new_balance
-
-    def get_all_users(self):
-        self.cursor.execute("SELECT user_id FROM balances WHERE user_id != ?", (OWNER_ID,))
-        return [row[0] for row in self.cursor.fetchall()]
     
     @commands.slash_command(description='Баланс пользователя')
     async def balance(self, ctx, member: disnake.Member = None):
         if member is None:
             member = ctx.author
 
-        balance = self.get_balance(member.id)
+        balance = self.balance_service.get_balance(member.id)
 
         if balance == float('inf'):
             balance_display = "∞📼"
@@ -238,7 +209,7 @@ class Economy(commands.Cog):
             return
         
         earnings = random.randint(30, 60)
-        self.update_balance(ctx.author.id, earnings)
+        self.balance_service.update_balance(ctx.author.id, earnings)
         
         embed = disnake.Embed(
             title='Работа',
@@ -267,7 +238,7 @@ class Economy(commands.Cog):
         if retry_after:
             retry_time = int(time.time() + retry_after)
             time_left = f'<t:{retry_time}:R>'
-            
+
             embed = disnake.Embed(
                 title='Ожидание',
                 description=f'Вы сможете использовать /collect {time_left}.',
@@ -277,18 +248,19 @@ class Economy(commands.Cog):
             await ctx.response.send_message(embed=embed, ephemeral=True)
             return
 
-        if total_earnings == 0:
+        if not earning_roles: 
             embed = disnake.Embed(
                 title='Доход ролей',
-                description=f'Вы собрали: {total_earnings}📼',
+                description=f'Вы собрали: 0📼',
                 color=0xFFFFFF
             )
             embed.set_thumbnail(url=ctx.author.display_avatar.url)
             await ctx.response.send_message(embed=embed)
             return
-        
-        self.update_balance(ctx.author.id, total_earnings)
-        
+
+        if total_earnings > 0:
+            self.balance_service.update_balance(ctx.author.id, total_earnings)
+
         description_lines = [f'**Общий заработок: {total_earnings}📼**']
         if earning_roles:
             description_lines.append("\n**Доход от ролей:**")
@@ -332,26 +304,23 @@ class Economy(commands.Cog):
         await ctx.response.send_message(embed=embed, view=view)
 
     async def show_leaderboard(self, ctx, page):
-        self.cursor.execute("SELECT user_id, balance FROM balances WHERE user_id != ? ORDER BY balance DESC", (OWNER_ID,))
-        all_users = self.cursor.fetchall()
-        
-        total_pages = (len(all_users) + 9) // 10
-        page = max(1, min(page, total_pages)) 
-        start_index = (page - 1) * 10
-        end_index = start_index + 10
-        page_users = all_users[start_index:end_index]
+        exclude_ids = list(OWNER_ID)
+        total_count = self.leaderboard_service.get_total_count(exclude_user_ids=exclude_ids)
+        per_page = 10
+        total_pages = (total_count + per_page - 1) // per_page
+        page = max(1, min(page, total_pages))
+
+        leaders = self.leaderboard_service.get_leaderboard(page=page, per_page=per_page, exclude_user_ids=exclude_ids)
 
         embed = disnake.Embed(
             title='📼 Топ пользователей по балансу',
             color=0xFFFFFF
         )
 
-        for index, (user_id, balance) in enumerate(page_users, start=start_index + 1):
+        start_index = (page - 1) * per_page + 1
+        for index, (user_id, balance) in enumerate(leaders, start=start_index):
             member = ctx.guild.get_member(user_id)
-            if member:
-                name = member.display_name
-            else:
-                name = f'<@{user_id}>'
+            name = member.display_name if member else f'<@{user_id}>'
             embed.add_field(
                 name=f'{index}. {name}',
                 value=f'```{balance}📼```',
@@ -373,7 +342,8 @@ class Economy(commands.Cog):
             await ctx.response.send_message(embed=embed, ephemeral=True)
             return
     
-        user_balance = self.get_balance(ctx.author.id)
+        user_balance = self.balance_service.get_balance(ctx.author.id)
+
         if user_balance < amount:
             embed = disnake.Embed(
                 title='Ошибка',
@@ -384,8 +354,8 @@ class Economy(commands.Cog):
             await ctx.response.send_message(embed=embed, ephemeral=True)
             return
         
-        self.update_balance(ctx.author.id, -amount)
-        self.update_balance(member.id, amount)
+        self.balance_service.update_balance(ctx.author.id, -amount)
+        self.balance_service.update_balance(member.id, amount)
 
         embed = disnake.Embed(
             title=None,
@@ -396,13 +366,4 @@ class Economy(commands.Cog):
         await ctx.response.send_message(embed=embed)
     
 def setup(bot: commands.Bot):
-    importlib.reload(EconomyModeration)
-    importlib.reload(EconomyGames)
     bot.add_cog(Economy(bot))
-    bot.add_cog(EconomyModeration.EconomyModeration(bot))
-    bot.add_cog(EconomyGames.EconomyGames(bot))
-
-def teardown(bot: commands.Bot):
-    bot.remove_cog('Economy')
-    bot.remove_cog('EconomyModeration')
-    bot.remove_cog('EconomyGames')

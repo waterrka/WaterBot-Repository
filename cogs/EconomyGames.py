@@ -6,12 +6,13 @@ import asyncio
 import json
 import time
 from disnake import Option
+from cogs.services.BalanceService import BalanceService
 
 class EconomyGames(commands.Cog):
     def __init__(self, bot, interaction=disnake.ApplicationCommandInteraction):
         self.bot = bot
-        self.economy = self.bot.get_cog('Economy')
-        with open('./cogs/economy/slots.json', encoding='utf-8') as f:
+        self.balance_service = BalanceService()
+        with open('./cogs/slots.json', encoding='utf-8') as f:
             self.slots_cfg = json.load(f)
 
     def format_balance(self, amount):
@@ -30,7 +31,7 @@ class EconomyGames(commands.Cog):
     @commands.cooldown(6, 300, commands.BucketType.user)
     async def slots(self, ctx, bet: int): # спасибо большое Линуксоиду за команду
         user_id = ctx.author.id
-        user_balance = self.economy.get_balance(user_id)
+        user_balance = self.balance_service.get_balance(user_id)
         if user_balance < bet:
             embed = disnake.Embed(
                 title='Ошибка',
@@ -47,7 +48,7 @@ class EconomyGames(commands.Cog):
             )
             await ctx.response.send_message(embed=embed, ephemeral=True)
             return
-        self.economy.update_balance(ctx.author.id, -bet)
+        self.balance_service.update_balance(ctx.author.id, -bet)
         symbols = []
         weights = []
         rewards = {}
@@ -86,14 +87,14 @@ class EconomyGames(commands.Cog):
         reward_text = '```Ничего, удачи в следующий раз```'
         if total_reward > 0:
             reward_text = f'```{total_reward}📼```'
-            self.economy.update_balance(ctx.author.id, total_reward)
+            self.balance_service.update_balance(ctx.author.id, total_reward)
         slots_embed.add_field(name='Награда', value=reward_text, inline=False)
         await ctx.edit_original_message(embed=slots_embed)
 
     @commands.slash_command(description='Обычная рулетка')
-    async def roullete(self, ctx, bet: int, space: str = commands.Param(name='space', description='Выберите цвет', choices=['Красный', 'Черный'])):
+    async def roullete(self, ctx, bet: int, space: str = commands.Param(name='space', description='Выберите цвет', choices=['Красный', 'Черный', 'Зелёный'])):
         user_id = ctx.author.id
-        user_balance = self.economy.get_balance(user_id)
+        user_balance = self.balance_service.get_balance(user_id)
 
         if user_balance < bet:
             embed = disnake.Embed(
@@ -109,8 +110,10 @@ class EconomyGames(commands.Cog):
                 description='Ошибка, минимальная ставка 50📼.',
                 color=0xFFFFFF
             )
+            await ctx.response.send_message(embed=embed, ephemeral=True)
+            return
 
-        self.economy.update_balance(user_id, -bet)
+        self.balance_service.update_balance(user_id, -bet)
 
         timestamp = int(time.time()) + 10  
         time_str = f'<t:{timestamp}:R>'
@@ -124,31 +127,40 @@ class EconomyGames(commands.Cog):
         await ctx.response.send_message(embed=embed)
         await asyncio.sleep(9)
 
-        result = random.choice(['Красный', 'Черный'])
+        result = random.choices(
+            population=['Красный', 'Черный', 'Зелёный'],
+            weights=[9, 9, 1],  # 1/19 ≈ 5.26% шанс зелёного
+            k=1
+        )[0]
 
         if space == result:
-            reward = bet * 2
+            if result == 'Зелёный':
+                reward = bet * 3
+            else:
+                reward = bet * 2
+
             embed = disnake.Embed(
                 title='Рулетка',
-                description=f'Выпал **{space}** цвет.\nВыйгрыш:```{reward}📼```',
+                description=f'Выпал **{result}** цвет.\nВыигрыш:```{reward}📼```',
                 color=0xFFFFFF
             )
             embed.set_footer(text=f'Ставка ・ {bet}📼')
-            self.economy.update_balance(user_id, reward)
+            self.balance_service.update_balance(user_id, reward)
         else:
             embed = disnake.Embed(
                 title='Рулетка',
-                description=f'Выпал **{result}** цвет.\nВыйгрыш:```Ничего, удачи в следующий раз.```',
+                description=f'Выпал **{result}** цвет.\nВыигрыш:```Ничего, удачи в следующий раз.```',
                 color=0xFFFFFF
             )
             embed.set_footer(text=f'Ставка ・ {bet}📼')
+
         await ctx.edit_original_message(embed=embed)
 
     @commands.slash_command(description='Сыграть в русскую рулетку')
     @commands.cooldown(5, 300, commands.BucketType.user)
     async def russian_roulette(self, ctx, bet: int):
         user_id = ctx.author.id
-        user_balance = self.economy.get_balance(user_id)
+        user_balance = self.balance_service.get_balance(user_id)
         
         if user_balance < bet:
             embed = disnake.Embed(
@@ -165,7 +177,7 @@ class EconomyGames(commands.Cog):
                 color=0xFFFFFF
             )
 
-        self.economy.update_balance(user_id, -bet)
+        self.balance_service.update_balance(user_id, -bet)
 
         embed = disnake.Embed(
             title='Русская рулетка',
@@ -181,14 +193,14 @@ class EconomyGames(commands.Cog):
             'current_player' : None,
             'start' : True
         }
-        view = RouletteView(game, self.economy)
+        view = RouletteView(game, self.balance_service)
         await ctx.response.send_message(embed=embed, view=view)
 
 class RouletteView(disnake.ui.View):
     def __init__(self, game, economy):
         super().__init__()
         self.game = game
-        self.economy = economy
+        self.balance_service = BalanceService()
 
     @disnake.ui.button(label='Начать', custom_id='start', style=disnake.ButtonStyle.green, disabled=True)
     async def start(self, button: disnake.ui.Button, ctx: disnake.MessageInteraction):
@@ -212,7 +224,7 @@ class RouletteView(disnake.ui.View):
                         f'Общий баланс: ```{game["total_bet"]}📼```\nСтавка: ```{game["bet"]}📼```',
             color=0xFFFFFF
         )
-        roulette_game_view = RouletteGameView(game, self.economy)
+        roulette_game_view = RouletteGameView(game, self.balance_service)
 
         await ctx.response.send_message(embed=embed, view=roulette_game_view)
 
@@ -239,7 +251,7 @@ class RouletteView(disnake.ui.View):
             await ctx.response.send_message(embed=embed, ephemeral=True)
             return
 
-        user_balance = self.economy.get_balance(user.id)
+        user_balance = self.balance_service.get_balance(user.id)
         if user_balance < game['bet']:
             embed = disnake.Embed(
                 title='Ошибка',
@@ -249,7 +261,7 @@ class RouletteView(disnake.ui.View):
             await ctx.response.send_message(embed=embed, ephemeral=True)
             return
 
-        self.economy.update_balance(user.id, -game['bet'])
+        self.balance_service.update_balance(user.id, -game['bet'])
         game['players'].append(user)
         game['total_bet'] += game['bet']
 
@@ -279,7 +291,7 @@ class RouletteView(disnake.ui.View):
         game = self.game
         game['start'] = False
         for player in game['players']:
-            self.economy.update_balance(player.id, game['bet'])
+            self.balance_service.update_balance(player.id, game['bet'])
         embed = disnake.Embed(
             title='Русская рулетка',
             description='Игра отменена. Деньги возвращены на баланс.',
@@ -289,10 +301,10 @@ class RouletteView(disnake.ui.View):
         await ctx.response.send_message(embed=embed)
 
 class RouletteGameView(disnake.ui.View):
-    def __init__(self, game, economy):
+    def __init__(self, game):
         super().__init__()
         self.game = game
-        self.economy = economy
+        self.balance_service = BalanceService()
         self.reset_chamber()
 
     def reset_chamber(self):
@@ -351,7 +363,7 @@ class RouletteGameView(disnake.ui.View):
             # Проверяем, остался ли один победитель
             if len(game['players']) == 1:
                 winner = game['players'][0]
-                self.economy.update_balance(winner.id, game['total_bet'])
+                self.balance_service.update_balance(winner.id, game['total_bet'])
                 embed = disnake.Embed(
                     title='Победа!',
                     description=f'{winner.mention} побеждает и выигрывает: ```{game["total_bet"]}📼```',
@@ -395,7 +407,7 @@ class RouletteGameView(disnake.ui.View):
             await ctx.response.send_message(embed=embed, ephemeral=True)
             return
 
-        user_balance = self.economy.get_balance(ctx.author.id)
+        user_balance = self.balance_service.get_balance(ctx.author.id)
         if user_balance < game['bet']:
             embed = disnake.Embed(
                 title='Ошибка',
@@ -405,7 +417,7 @@ class RouletteGameView(disnake.ui.View):
             await ctx.response.send_message(embed=embed, ephemeral=True)
             return
 
-        self.economy.update_balance(ctx.author.id, -game['bet'])
+        self.balance_service.update_balance(ctx.author.id, -game['bet'])
         game['total_bet'] += game['bet']
 
         embed = disnake.Embed(
@@ -472,7 +484,7 @@ class RouletteGameView(disnake.ui.View):
 
             if len(game['players']) == 1:
                 winner = game['players'][0]
-                self.economy.update_balance(winner.id, game['total_bet'])
+                self.balance_service.update_balance(winner.id, game['total_bet'])
                 embed = disnake.Embed(
                     title='Победа!',
                     description=f'{winner.mention} побеждает и выигрывает: ```{game["total_bet"]}📼```',
