@@ -4,6 +4,7 @@ import time
 from disnake.ui import View, Button
 from disnake import ButtonStyle
 from datetime import *
+from cogs.services.BalanceService import BalanceService
 
 claimed_users = set()
 claimed_count = 999
@@ -11,22 +12,8 @@ claimed_count = 999
 class Other(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.balance_service = BalanceService()
 
-    @commands.slash_command(description='Справка по боту')
-    async def help(self, ctx):
-        embed = disnake.Embed(
-            title='📖 Помощь по командам',
-            description='Ниже приведён список доступных категорий команд:',
-            color=0xFFFFFF
-        )
-        embed.add_field(name='💰 Экономика', value='`/balance`, `/work`, `/collect`, `/list_collect`, `/shop`, `/leaderboard`, `/pay`,', inline=False)
-        embed.add_field(name='🎮 Казино', value='`/slots`, `/roulette`, `/russian_roulette`', inline=False)
-        embed.add_field(name='🛠️ Модерация', value='`/mute`, `/unmute`, `/ban`, `/unban`, `/warn`, `/rewarn`, `/warns`', inline=False)
-        embed.add_field(name='ℹ️ Прочее', value='`/help`, `/avatar`, `/emoji`, `/ping`, `/server_info`, `/boosty_info`', inline=False)
-        # embed.add_field(name='🤖 Эксклюзив', value='Так же у нас есть **Искуственный Интелект**, с которым можно поговорить(<пинг бота> ваш текст).', inline=False)
-        embed.set_footer(text='Используй /<команда> для вызова команды.')
-
-        await ctx.response.send_message(embed=embed)
     @commands.slash_command(description = 'Скорость отправки сообщения бота')
     async def ping(self, ctx):
         latency = round(self.bot.latency * 1000)
@@ -177,15 +164,15 @@ class Other(commands.Cog):
             color=0xFFFFFF
         )
         embed.set_footer(text=f'{ctx.author.display_name} • Награда 100📼', icon_url=ctx.author.display_avatar.url)
-        economy_cog = self.bot.get_cog("Economy")
-        view = GiftButton(embed, economy_cog, ctx.author)
+        balance_service = BalanceService()
+        view = GiftButton(embed, balance_service, ctx.author)
         await ctx.send(embed=embed, view=view)
 
 class GiftButton(disnake.ui.View):
     def __init__(self, embed, economy_cog, author):
         super().__init__(timeout=None)
         self.embed = embed
-        self.economy = economy_cog
+        self.balance_service = BalanceService()
         self.author = author 
 
     @disnake.ui.button(label='Получить', style=ButtonStyle.success)
@@ -207,8 +194,8 @@ class GiftButton(disnake.ui.View):
         claimed_users.add(ctx.user.id)
         claimed_count -= 1
 
-        if self.economy:
-            self.economy.update_balance(ctx.user.id, 100)
+        if self.balance_service:
+            self.balance_service.update_balance(ctx.user.id, 100)
 
         self.embed.title = f'ватерка балует [Осталось {claimed_count}]'
         self.embed.set_footer(text=f'{self.author.display_name} • Награда 100📼', icon_url=self.author.display_avatar.url)
